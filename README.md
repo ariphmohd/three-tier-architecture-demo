@@ -1,128 +1,93 @@
-# Three Tier Architecture Deployment on AWS EKS
+# Three-Tier E-Commerce Architecture Microservices
 
-Stan's Robot Shop is a sample microservice application you can use as a sandbox to test and learn containerised application orchestration and monitoring techniques. It is not intended to be a comprehensive reference example of how to write a microservices application, although you will better understand some of those concepts by playing with Stan's Robot Shop. To be clear, the error handling is patchy and there is not any security built into the application.
+This repository contains the standalone source code for **Stan's Robot Shop**, a polyglot microservices e-commerce application structured in a classic **Three-Tier Architecture**.
 
-You can get more detailed information from my [blog post](https://www.instana.com/blog/stans-robot-shop-sample-microservice-application/) about this sample microservice application.
+---
 
-This sample microservice application has been built using these technologies:
-- NodeJS ([Express](http://expressjs.com/))
-- Java ([Spring Boot](https://spring.io/))
-- Python ([Flask](http://flask.pocoo.org))
-- Golang
-- PHP (Apache)
-- MongoDB
-- Redis
-- MySQL ([Maxmind](http://www.maxmind.com) data)
-- RabbitMQ
-- Nginx
-- AngularJS (1.x)
+## Architecture Overview
 
-The various services in the sample application already include all required Instana components installed and configured. The Instana components provide automatic instrumentation for complete end to end [tracing](https://docs.instana.io/core_concepts/tracing/), as well as complete visibility into time series metrics for all the technologies.
+```mermaid
+flowchart TD
+    Client(["User Browser"])
 
-To see the application performance results in the Instana dashboard, you will first need an Instana account. Don't worry a [trial account](https://instana.com/trial?utm_source=github&utm_medium=robot_shop) is free.
+    subgraph Tier1["Tier 1: Presentation (Web)"]
+        Web["web (Nginx + AngularJS SPA)<br/>Port: 8080"]
+    end
 
-## Build from Source
-To optionally build from source (you will need a newish version of Docker to do this) use Docker Compose. Optionally edit the `.env` file to specify an alternative image registry and version tag; see the official [documentation](https://docs.docker.com/compose/env-file/) for more information.
+    subgraph Tier2["Tier 2: Application / Logic (Microservices)"]
+        Catalogue["catalogue (Node.js/Express)<br/>Port: 8080"]
+        User["user (Node.js/Express)<br/>Port: 8080"]
+        Cart["cart (Node.js/Express)<br/>Port: 8080"]
+        Shipping["shipping (Java/Spring Boot)<br/>Port: 8080"]
+        Ratings["ratings (PHP/Symfony)<br/>Port: 80"]
+        Payment["payment (Python/Flask)<br/>Port: 8080"]
+        Dispatch["dispatch (Golang)<br/>Headless Worker"]
+    end
 
-To download the tracing module for Nginx, it needs a valid Instana agent key. Set this in the environment before starting the build.
+    subgraph Tier3["Tier 3: Data & Messaging (Persistence)"]
+        MongoDB[("MongoDB (:27017)<br/>Databases: catalogue, users")]
+        Redis[("Redis (:6379)<br/>Cart sessions & counters")]
+        MySQL[("MySQL (:3306)<br/>Databases: cities, ratings")]
+        RabbitMQ[("RabbitMQ (:5672)<br/>Queue: orders")]
+    end
 
-```shell
-$ export INSTANA_AGENT_KEY="<your agent key>"
+    Client -->|HTTP :8080| Web
+
+    Web -->|/api/catalogue/*| Catalogue
+    Web -->|/api/user/*| User
+    Web -->|/api/cart/*| Cart
+    Web -->|/api/shipping/*| Shipping
+    Web -->|/api/ratings/*| Ratings
+    Web -->|/api/payment/*| Payment
+
+    Catalogue --> MongoDB
+    User --> MongoDB
+    User --> Redis
+    Cart --> Redis
+    Cart -.->|Verify price & stock| Catalogue
+    Shipping --> MySQL
+    Shipping -.->|Add shipping charge| Cart
+    Ratings --> MySQL
+    Ratings -.->|Verify SKU| Catalogue
+    Payment -.->|Verify user & save order| User
+    Payment -.->|Clear cart| Cart
+    Payment -->|Publish order| RabbitMQ
+    Dispatch -->|Consume order| RabbitMQ
 ```
 
-Now build all the images.
+---
 
-```shell
-$ docker-compose build
-```
+## Microservices Directory & Documentation
 
-If you modified the `.env` file and changed the image registry, you need to push the images to that registry
+Click on any microservice below to see its dedicated documentation, architecture diagram, dependencies, and local run/test commands:
 
-```shell
-$ docker-compose push
-```
+| Microservice | Tier | Stack | Primary Role | Documentation |
+| :--- | :--- | :--- | :--- | :--- |
+| **[web](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/web)** | Tier 1 (Presentation) | Nginx, AngularJS | Storefront SPA & API Reverse Proxy | [web/README.md](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/web/README.md) |
+| **[catalogue](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/catalogue)** | Tier 2 (Application) | Node.js, Express | Product listings, categories, and search | [catalogue/README.md](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/catalogue/README.md) |
+| **[user](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/user)** | Tier 2 (Application) | Node.js, Express | Authentication, user profiles, and order history | [user/README.md](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/user/README.md) |
+| **[cart](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/cart)** | Tier 2 (Application) | Node.js, Express | In-flight shopping carts & Prometheus metrics | [cart/README.md](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/cart/README.md) |
+| **[shipping](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/shipping)** | Tier 2 (Application) | Java 8, Spring Boot | Distance and delivery cost calculations | [shipping/README.md](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/shipping/README.md) |
+| **[ratings](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/ratings)** | Tier 2 (Application) | PHP 7.4, Symfony | Product star ratings and reviews | [ratings/README.md](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/ratings/README.md) |
+| **[payment](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/payment)** | Tier 2 (Application) | Python 3.9, Flask | Order checkout & payment gateway processing | [payment/README.md](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/payment/README.md) |
+| **[dispatch](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/dispatch)** | Tier 2 (Application) | Go (Golang) | Background queue consumer for order fulfillment | [dispatch/README.md](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/dispatch/README.md) |
+| **[mongo](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/mongo)** | Tier 3 (Data) | MongoDB 5 | Document store for catalogue & user data | [mongo/README.md](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/mongo/README.md) |
+| **[mysql](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/mysql)** | Tier 3 (Data) | MySQL 5.7 | Relational store for cities & product ratings | [mysql/README.md](file:///Users/ariansar/Downloads/EKS-Three-Tier/three-tier-architecture-demo/mysql/README.md) |
 
-## Run Locally
-You can run it locally for testing.
+---
 
-If you did not build from source, don't worry all the images are on Docker Hub. Just pull down those images first using:
+## Inter-Service Communication Matrix
 
-```shell
-$ docker-compose pull
-```
-
-Fire up Stan's Robot Shop with:
-
-```shell
-$ docker-compose up
-```
-
-If you want to fire up some load as well:
-
-```shell
-$ docker-compose -f docker-compose.yaml -f docker-compose-load.yaml up
-```
-
-If you are running it locally on a Linux host you can also run the Instana [agent](https://docs.instana.io/quick_start/agent_setup/container/docker/) locally, unfortunately the agent is currently not supported on Mac.
-
-There is also only limited support on ARM architectures at the moment.
-
-## Marathon / DCOS
-
-The manifests for robotshop are in the *DCOS/* directory. These manifests were built using a fresh install of DCOS 1.11.0. They should work on a vanilla HA or single instance install.
-
-You may install Instana via the DCOS package manager, instructions are here: https://github.com/dcos/examples/tree/master/instana-agent/1.9
-
-## Kubernetes
-You can run Kubernetes locally using [minikube](https://github.com/kubernetes/minikube) or on one of the many cloud providers.
-
-The Docker container images are all available on [Docker Hub](https://hub.docker.com/u/robotshop/).
-
-Install Stan's Robot Shop to your Kubernetes cluster using the [Helm](K8s/helm/README.md) chart.
-
-To deploy the Instana agent to Kubernetes, just use the [helm](https://github.com/instana/helm-charts) chart.
-
-## Accessing the Store
-If you are running the store locally via *docker-compose up* then, the store front is available on localhost port 8080 [http://localhost:8080](http://localhost:8080/)
-
-If you are running the store on Kubernetes via minikube then, find the IP address of Minikube and the Node Port of the web service.
-
-```shell
-$ minikube ip
-$ kubectl get svc web
-```
-
-If you are using a cloud Kubernetes / Openshift / Mesosphere then it will be available on the load balancer of that system.
-
-## Load Generation
-A separate load generation utility is provided in the `load-gen` directory. This is not automatically run when the application is started. The load generator is built with Python and [Locust](https://locust.io). The `build.sh` script builds the Docker image, optionally taking *push* as the first argument to also push the image to the registry. The registry and tag settings are loaded from the `.env` file in the parent directory. The script `load-gen.sh` runs the image, it takes a number of command line arguments. You could run the container inside an orchestration system (K8s) as well if you want to, an example descriptor is provided in K8s directory. For End-user Monitoring ,load is not automatically generated but by navigating through the Robotshop from the browser .For more details see the [README](load-gen/README.md) in the load-gen directory.  
-
-## Website Monitoring / End-User Monitoring
-
-### Docker Compose
-
-To enable Website Monioring / End-User Monitoring (EUM) see the official [documentation](https://docs.instana.io/website_monitoring/) for how to create a configuration. There is no need to inject the JavaScript fragment into the page, this will be handled automatically. Just make a note of the unique key and set the environment variable `INSTANA_EUM_KEY` and `INSTANA_EUM_REPORTING_URL` for the web image within `docker-compose.yaml`.
-
-### Kubernetes
-
-The Helm chart for installing Stan's Robot Shop supports setting the key and endpoint url required for website monitoring, see the [README](K8s/helm/README.md).
-
-## Prometheus
-
-The cart and payment services both have Prometheus metric endpoints. These are accessible on `/metrics`. The cart service provides:
-
-* Counter of the number of items added to the cart
-
-The payment services provides:
-
-* Counter of the number of items perchased
-* Histogram of the total number of items in each cart
-* Histogram of the total value of each cart
-
-To test the metrics use:
-
-```shell
-$ curl http://<host>:8080/api/cart/metrics
-$ curl http://<host>:8080/api/payment/metrics
-```
-
+| Source Service | Target Service | Protocol | Port | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| `web` | `catalogue`, `user`, `cart`, `shipping`, `payment`, `ratings` | HTTP | 8080 / 80 | Client traffic reverse-proxying |
+| `cart` | `catalogue` | HTTP | 8080 | Look up unit price, existence, and stock availability |
+| `cart` | `redis` | RESP | 6379 | Store active cart JSON |
+| `shipping` | `cart` | HTTP | 8080 | Inject calculated shipping fee (`sku: 'SHIP'`) |
+| `shipping` | `mysql` | JDBC | 3306 | Query `cities` coordinate database |
+| `ratings` | `catalogue` | HTTP | 8080 | Check that SKU exists before saving rating |
+| `ratings` | `mysql` | PDO | 3306 | Read and write product ratings |
+| `payment` | `user` | HTTP | 8080 | Verify user and append order to history |
+| `payment` | `cart` | HTTP | 8080 | Verify valid total/shipping and empty cart |
+| `payment` | `rabbitmq` | AMQP | 5672 | Publish order event to `orders` queue |
+| `dispatch` | `rabbitmq` | AMQP | 5672 | Consume order events from `orders` queue |
