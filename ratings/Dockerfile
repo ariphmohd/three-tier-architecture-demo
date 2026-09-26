@@ -3,8 +3,11 @@
 #
 FROM php:7.4-apache
 
-RUN apt-get update && apt-get install -yqq unzip libzip-dev \
-    && docker-php-ext-install pdo_mysql opcache zip
+RUN apt-get update && apt-get install -yqq --no-install-recommends --fix-missing \
+        unzip \
+        libzip-dev \
+    && docker-php-ext-install pdo_mysql opcache zip \
+    && rm -rf /var/lib/apt/lists/*
 
 # Enable AutoProfile for PHP which is currently opt-in beta
 RUN echo "instana.enable_auto_profile=1" > "/usr/local/etc/php/conf.d/zzz-instana-extras.ini"
@@ -18,14 +21,10 @@ WORKDIR /var/www/html
 
 COPY html/ /var/www/html
 
-COPY --from=composer /usr/bin/composer /usr/bin/composer
-RUN composer install
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+RUN composer install --no-interaction --no-ansi --no-progress --ignore-platform-reqs
 
-# This is important. Symfony needs write permissions and we
-# dont know the context in which the container will run, i.e.
-# which user will be forced from the outside so better play
-# safe for this simple demo.
+# This is important. Symfony needs write permissions
 RUN rm -Rf /var/www/var/*
 RUN chown -R www-data /var/www
 RUN chmod -R 777 /var/www
-
