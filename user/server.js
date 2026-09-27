@@ -122,7 +122,10 @@ app.post('/login', (req, res) => {
         res.status(400).send('name or passowrd not supplied');
     } else if(mongoConnected) {
         usersCollection.findOne({
-            name: req.body.name,
+            $or: [
+                { name: req.body.name },
+                { email: req.body.name }
+            ]
         }).then((user) => {
             req.log.info('user', user);
             if(user) {
@@ -132,7 +135,7 @@ app.post('/login', (req, res) => {
                     res.status(404).send('incorrect password');
                 }
             } else {
-                res.status(404).send('name not found');
+                res.status(404).send('name or email not found');
             }
         }).catch((e) => {
             req.log.error('ERROR', e);
