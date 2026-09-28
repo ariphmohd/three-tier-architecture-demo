@@ -104,3 +104,9 @@ output "eks_oidc_provider_arn" {
   value       = module.eks.oidc_provider_arn
 }
 
+output "eks_ebs_csi_role_arn" {
+  description = "ARN of the IAM role for the Amazon EBS CSI Driver (IRSA)"
+  value       = module.eks.ebs_csi_role_arn
+}
+
+

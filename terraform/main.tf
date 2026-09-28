@@ -67,9 +67,12 @@ module "eks" {
   project_name                = var.project_name
   environment                 = var.environment
   cluster_name                = local.cluster_name
+  kubernetes_version          = var.kubernetes_version
+  node_instance_types         = var.node_instance_types
   vpc_id                      = module.vpc.vpc_id
   public_subnet_ids           = module.vpc.public_subnet_ids
   private_app_subnet_ids      = module.vpc.private_app_subnet_ids
   eks_nodes_security_group_id = module.security_groups.eks_nodes_security_group_id
   secrets_manager_arn         = module.secrets.secret_arn
 }
+

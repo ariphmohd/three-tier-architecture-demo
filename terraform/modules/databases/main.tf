@@ -5,7 +5,7 @@ resource "aws_db_instance" "mysql" {
   identifier            = "${var.project_name}-${var.environment}-mysql"
   engine                = "mysql"
   engine_version        = "8.0"
-  instance_class        = var.environment == "prod" ? "db.m5.large" : "db.t3.micro"
+  instance_class        = var.environment == "prod" ? "db.m6i.large" : "db.t3.micro"
   allocated_storage     = 20
   max_allocated_storage = 100
   storage_type          = "gp3"
@@ -52,7 +52,7 @@ resource "aws_docdb_cluster_instance" "docdb_instances" {
   count              = var.environment == "prod" ? 3 : 1
   identifier         = "${var.project_name}-${var.environment}-docdb-${count.index + 1}"
   cluster_identifier = aws_docdb_cluster.docdb.id
-  instance_class     = var.environment == "prod" ? "db.r5.large" : "db.t3.medium"
+  instance_class     = var.environment == "prod" ? "db.r6g.large" : "db.t3.medium"
 
   tags = {
     Name = "${var.project_name}-${var.environment}-docdb-${count.index + 1}"
@@ -66,7 +66,7 @@ resource "aws_docdb_cluster_instance" "docdb_instances" {
 resource "aws_elasticache_replication_group" "redis" {
   replication_group_id       = "${var.project_name}-${var.environment}-redis"
   description                = "Redis in-memory cache for shopping carts"
-  node_type                  = var.environment == "prod" ? "cache.m5.large" : "cache.t3.micro"
+  node_type                  = var.environment == "prod" ? "cache.m6g.large" : "cache.t3.micro"
   num_cache_clusters         = var.environment == "prod" ? 3 : 1
   automatic_failover_enabled = var.environment == "prod" ? true : false
 
@@ -89,8 +89,9 @@ resource "aws_elasticache_replication_group" "redis" {
 resource "aws_mq_broker" "rabbitmq" {
   broker_name        = "${var.project_name}-${var.environment}-rabbitmq"
   engine_type        = "RabbitMQ"
-  engine_version     = "3.13"
-  host_instance_type = var.environment == "prod" ? "mq.m5.large" : "mq.t3.micro"
+  engine_version     = "4.2"
+  host_instance_type = var.environment == "prod" ? "mq.m7g.large" : "mq.m7g.large"
+  storage_type       = "ebs"
   deployment_mode    = var.environment == "prod" ? "CLUSTER_MULTI_AZ" : "SINGLE_INSTANCE"
 
   subnet_ids          = var.environment == "prod" ? var.isolated_db_subnet_ids : [var.isolated_db_subnet_ids[0]]

@@ -37,3 +37,9 @@ output "secrets_csi_role_arn" {
   description = "ARN of the IAM role for the Secrets Store CSI Driver"
   value       = aws_iam_role.secrets_csi.arn
 }
+
+output "ebs_csi_role_arn" {
+  description = "ARN of the IAM role for the Amazon EBS CSI Driver"
+  value       = aws_iam_role.ebs_csi.arn
+}
+

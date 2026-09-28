@@ -27,3 +27,15 @@ variable "single_nat_gateway" {
   type        = bool
   default     = true
 }
+
+variable "kubernetes_version" {
+  description = "Desired Kubernetes version for Amazon EKS (Standard Support: 1.34 - 1.36)"
+  type        = string
+  default     = "1.36"
+}
+
+variable "node_instance_types" {
+  description = "EC2 instance types for EKS managed node group"
+  type        = list(string)
+  default     = ["t3.large"]
+}

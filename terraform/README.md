@@ -49,7 +49,7 @@ terraform/
     ├── security_groups/        # Stage 2: Least-privilege firewalls (alb_sg -> eks_sg -> db_sg)
     ├── secrets/                # Stage 3: AWS Secrets Manager & random_password generation
     ├── databases/              # Stage 4: AWS Managed RDS, DocumentDB, ElastiCache, Amazon MQ
-    └── eks/                    # Stage 5: Amazon EKS v1.30 cluster, worker nodes, OIDC, IRSA, addons
+    └── eks/                    # Stage 5: Amazon EKS v1.36 cluster, worker nodes, OIDC, IRSA, addons
 ```
 
 ---
@@ -61,21 +61,22 @@ terraform/
 | **1** | [`modules/vpc`](./modules/vpc) | 3-Tier Multi-AZ Networking (`10.0.0.0/16`) | 1 VPC, 9 Subnets (3 Public, 3 Private, 3 Isolated), 1 Internet Gateway, Dynamic NAT Gateways (1 in dev, 3 in prod), 3 Route Tables, DB Subnet Groups. |
 | **2** | [`modules/security_groups`](./modules/security_groups) | Least-Privilege Network Firewalls | `alb_sg` (80/443 ingress), `eks_nodes_sg` (8080 from ALB only, self intra-cluster), `database_sg` (3306, 27017, 6379, 5672 strictly from `eks_nodes_sg`). |
 | **3** | [`modules/secrets`](./modules/secrets) | Credentials Management | `random_password` (20+ chars, special characters excluded to avoid URI parsing bugs), AWS Secrets Manager vault storing JSON payload for all PaaS data stores. |
-| **4** | [`modules/databases`](./modules/databases) | AWS Managed PaaS Data Stores | Amazon RDS MySQL, Amazon DocumentDB (MongoDB 5.0 compatible), Amazon ElastiCache Redis, Amazon MQ RabbitMQ in isolated Tier 3 subnets. |
-| **5** | [`modules/eks`](./modules/eks) | Kubernetes Compute & IAM | Amazon EKS Cluster v1.30, Private Managed Worker Node Group (`t3.medium` dev / `m5.large` prod), OIDC Provider, IRSA IAM roles for AWS Load Balancer Controller & Secrets Store CSI, EKS addons (`vpc-cni`, `coredns`, `kube-proxy`, `aws-ebs-csi-driver`). |
+| **4** | [`modules/databases`](./modules/databases) | AWS Managed PaaS Data Stores | Amazon RDS MySQL (8.0), Amazon DocumentDB (5.0), Amazon ElastiCache Redis (7.0), Amazon MQ RabbitMQ (4.2 on Graviton `mq.m7g.large`) in air-gapped subnets. |
+| **5** | [`modules/eks`](./modules/eks) | Kubernetes Compute & IAM | Amazon EKS Cluster v1.36, Private Managed Worker Node Group (`t3.large` dev / `m6i.large` prod), OIDC Provider, IRSA IAM roles (ALB Controller, Secrets Store CSI, EBS CSI Driver), EKS addons (`vpc-cni`, `coredns`, `kube-proxy`, `aws-ebs-csi-driver`). |
 
 ---
 
 ## ⚙️ Environments Comparison
 
-| Configuration | Development (`dev.tfvars`) | Production (`prod.tfvars`) |
-|---|---|---|
-| **NAT Gateways** | 1 (Shared across private subnets - saves ~$65/mo) | 3 (1 per AZ for high availability) |
-| **RDS MySQL** | Single-AZ `db.t3.micro` (Free-Tier eligible) | Multi-AZ `db.m5.large` with automatic standby failover |
-| **DocumentDB** | 1 instance `db.t3.medium` (30-day trial eligible) | 3 instances `db.r6g.large` cluster |
-| **ElastiCache Redis** | Single-node `cache.t3.micro` (Free-Tier eligible) | Multi-AZ replication group with automatic failover |
-| **Amazon MQ** | Single-broker `mq.t3.micro` (Free-Tier eligible) | Clustered active/standby broker |
-| **EKS Worker Nodes** | 2 &times; `t3.medium` (Min 1, Max 3) | 3 &times; `m5.large` (Min 3, Max 6) across 3 AZs |
+| Configuration | Development (`dev.tfvars`) | Production (`prod.tfvars`) | Rationale / Benefits |
+|---|---|---|---|
+| **Kubernetes Version** | `1.36` | `1.36` | Latest active AWS EKS Standard Support version. |
+| **NAT Gateways** | 1 (Shared across private subnets) | 3 (1 per AZ for high availability) | Saves ~$65/mo in dev while ensuring full multi-AZ HA in prod. |
+| **RDS MySQL** | Single-AZ `db.t3.micro` (Free-Tier eligible) | Multi-AZ `db.m6i.large` standby failover | 6th-gen Intel Ice Lake compute with zero downtime failover. |
+| **DocumentDB** | 1 instance `db.t3.medium` (30-day trial eligible) | 3 instances `db.r6g.large` cluster | Memory-optimized Graviton architecture. |
+| **ElastiCache Redis** | Single-node `cache.t3.micro` (Free-Tier eligible) | Multi-AZ `cache.m6g.large` replication group | Graviton price-performance standard with auto-failover. |
+| **Amazon MQ (RabbitMQ)** | Single-broker `mq.m7g.large` (RabbitMQ 4.2) | Clustered Multi-AZ `mq.m7g.large` (RabbitMQ 4.2) | Modern Graviton instance with EBS storage; avoids deprecated `mq.t3.micro`. |
+| **EKS Worker Nodes** | 2 &times; `t3.large` (Min 1, Max 3) | 3 &times; `["m6i.large", "m7i.large"]` (Min 3, Max 8) | Dev avoids the 17-pod limit; prod uses multi-family 6th/7th-gen pools. |
 
 ---
 

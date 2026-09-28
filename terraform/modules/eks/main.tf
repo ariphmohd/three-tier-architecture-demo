@@ -131,7 +131,7 @@ resource "aws_eks_node_group" "main" {
     max_size     = var.environment == "prod" ? 8 : 4
   }
 
-  instance_types = var.environment == "prod" ? ["m5.large"] : ["t3.medium"]
+  instance_types = var.node_instance_types
   capacity_type  = "ON_DEMAND"
   disk_size      = 30
 
@@ -153,11 +153,53 @@ resource "aws_eks_node_group" "main" {
 }
 
 # =============================================================================
-# 6. EKS Addons
+# 6. IRSA Role: AWS EBS CSI Driver
+# =============================================================================
+data "aws_iam_policy_document" "ebs_csi_assume_role" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    principals {
+      identifiers = [aws_iam_openid_connect_provider.cluster.arn]
+      type        = "Federated"
+    }
+  }
+}
+
+resource "aws_iam_role" "ebs_csi" {
+  name               = "${var.project_name}-${var.environment}-ebs-csi-role"
+  assume_role_policy = data.aws_iam_policy_document.ebs_csi_assume_role.json
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-ebs-csi-role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ebs_csi" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.ebs_csi.name
+}
+
+# =============================================================================
+# 7. EKS Addons (with explicit lifecycle dependencies)
 # =============================================================================
 resource "aws_eks_addon" "vpc_cni" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "vpc-cni"
+  depends_on   = [aws_eks_cluster.main]
 }
 
 resource "aws_eks_addon" "coredns" {
@@ -169,11 +211,18 @@ resource "aws_eks_addon" "coredns" {
 resource "aws_eks_addon" "kube_proxy" {
   cluster_name = aws_eks_cluster.main.name
   addon_name   = "kube-proxy"
+  depends_on   = [aws_eks_cluster.main]
 }
 
 resource "aws_eks_addon" "ebs_csi" {
-  cluster_name = aws_eks_cluster.main.name
-  addon_name   = "aws-ebs-csi-driver"
+  cluster_name             = aws_eks_cluster.main.name
+  addon_name               = "aws-ebs-csi-driver"
+  service_account_role_arn = aws_iam_role.ebs_csi.arn
+
+  depends_on = [
+    aws_eks_node_group.main,
+    aws_iam_role_policy_attachment.ebs_csi
+  ]
 }
 
 # =============================================================================

@@ -14,9 +14,15 @@ variable "cluster_name" {
 }
 
 variable "kubernetes_version" {
-  description = "Desired Kubernetes version for the EKS control plane"
+  description = "Desired Kubernetes version for the EKS control plane (Standard Support: 1.34 - 1.36)"
   type        = string
-  default     = "1.30"
+  default     = "1.36"
+}
+
+variable "node_instance_types" {
+  description = "EC2 instance types for EKS managed node group"
+  type        = list(string)
+  default     = ["t3.large"]
 }
 
 variable "vpc_id" {
