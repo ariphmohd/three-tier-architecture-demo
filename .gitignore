@@ -5,13 +5,13 @@
 **/.terraform/*
 
 # Do not ignore .terraform.lock.hcl (recommended by HashiCorp to lock provider hashes)
-# Remove the exclamation mark if you prefer to exclude provider locks
 !**/.terraform.lock.hcl
 
 # State files (may contain sensitive plaintext secrets & credentials)
 *.tfstate
 *.tfstate.*
 *.tfstate.backup
+.terraform.tfstate.lock.info
 
 # Crash logs
 crash.log
