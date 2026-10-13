@@ -10,4 +10,6 @@ module "vpc" {
   vpc_cidr           = var.vpc_cidr
   cluster_name       = local.cluster_name
   single_nat_gateway = var.single_nat_gateway
+  enable_nat_gateway = var.enable_nat_gateway
 }
+

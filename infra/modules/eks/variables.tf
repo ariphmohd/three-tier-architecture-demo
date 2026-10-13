@@ -55,3 +55,10 @@ variable "enable_ebs_csi" {
   type        = bool
   default     = false
 }
+
+variable "enable_nat_gateway" {
+  description = "Whether NAT Gateway is enabled. When false, worker nodes use public subnets (dev cost saving)."
+  type        = bool
+  default     = true
+}
+

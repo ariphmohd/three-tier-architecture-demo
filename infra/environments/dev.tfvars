@@ -7,4 +7,5 @@ kubernetes_version  = "1.36"
 node_instance_types = ["t3.micro"]
 enable_docdb        = false
 enable_ebs_csi      = false
+enable_nat_gateway  = false
 

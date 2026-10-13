@@ -52,3 +52,10 @@ variable "enable_ebs_csi" {
   type        = bool
   default     = false
 }
+
+variable "enable_nat_gateway" {
+  description = "Whether to provision NAT Gateway"
+  type        = bool
+  default     = true
+}
+

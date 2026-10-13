@@ -25,8 +25,9 @@ output "isolated_db_subnet_ids" {
 
 output "nat_gateway_ids" {
   description = "List of NAT Gateway IDs"
-  value       = aws_nat_gateway.main[*].id
+  value       = var.enable_nat_gateway ? aws_nat_gateway.main[*].id : []
 }
+
 
 output "rds_subnet_group_name" {
   description = "Name of the RDS DB Subnet Group"

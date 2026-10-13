@@ -23,3 +23,10 @@ variable "single_nat_gateway" {
   type        = bool
   default     = true
 }
+
+variable "enable_nat_gateway" {
+  description = "Whether to provision NAT Gateways. Set to false in dev to save ~$35/month."
+  type        = bool
+  default     = true
+}
+

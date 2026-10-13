@@ -49,3 +49,10 @@ variable "enable_docdb" {
   type    = bool
   default = false
 }
+
+variable "enable_nat_gateway" {
+  description = "Whether NAT Gateway is enabled"
+  type        = bool
+  default     = true
+}
+

@@ -37,4 +37,6 @@ module "eks" {
   private_app_subnet_ids      = data.terraform_remote_state.vpc.outputs.private_app_subnet_ids
   eks_nodes_security_group_id = data.terraform_remote_state.security_groups.outputs.eks_nodes_security_group_id
   secrets_manager_arn         = data.terraform_remote_state.secrets.outputs.secret_arn
+  enable_nat_gateway          = var.enable_nat_gateway
 }
+

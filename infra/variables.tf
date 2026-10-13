@@ -52,3 +52,10 @@ variable "enable_ebs_csi" {
   default     = false
 }
 
+variable "enable_nat_gateway" {
+  description = "Whether to provision NAT Gateways. Set to false in dev to save ~$35/month."
+  type        = bool
+  default     = true
+}
+
+

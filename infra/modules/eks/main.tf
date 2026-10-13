@@ -128,7 +128,7 @@ resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.project_name}-${var.environment}-nodes"
   node_role_arn   = aws_iam_role.nodes.arn
-  subnet_ids      = var.private_app_subnet_ids
+  subnet_ids      = var.enable_nat_gateway ? var.private_app_subnet_ids : var.public_subnet_ids
 
   scaling_config {
     desired_size = var.environment == "prod" ? 3 : 2
